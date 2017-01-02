@@ -1,90 +1,109 @@
-angular.module('appTareas',['ui.router'])
-.config(function($stateProvider, $urlRouterProvider){
-	$stateProvider.
-	state('alta',{
-		url:'/alta',
-		templateUrl: 'views/alta.html',
-		controller:'ctrlAlta'
-	})
-	.state('editar',{
-		url: '/editar/{id}',
-		templateUrl: 'views/editar.html',
-		controller: 'ctrlEditar'
-	});
-	$urlRouterProvider.otherwise('alta');
-})
-.factory('comun',function($http){
-	var comun = {};
+angular.module('appTareas', ['ui.router'])
+    .config(function($stateProvider, $urlRouterProvider) {
+        $stateProvider
+            .state('alta', {
+                url: '/alta',
+                templateUrl: 'views/alta.html',
+                controller: 'ctrlAlta'
+            })
+            .state('editar', {
+                url: '/editar',
+                templateUrl: 'views/editar.html',
+                controller: 'ctrlEditar'
+            });
 
-	comun.tareas = [];
+        $urlRouterProvider.otherwise('alta');
+    })
+    .factory('comun', function($http) {
+        var comun = {};
 
-	comun.tarea = {};
+        comun.tareas = [];
 
-	comun.eliminar = function(tarea){
-		var indice = comun.tareas.indexOf(tarea);
-		comun.tareas.splice(indice,1);
-	}
+        comun.tarea = {};
 
-	/*** Seccion de metodos remotos ***/
-	comun.getAll = function(){
-		return $http.get('/tareas')
-		.success(function(data){
-			angular.copy(data, comun.tareas);
-			return comun.tareas
-		})
-	}
+        /***Sección de métodos remotos***/
+        comun.getAll = function(){
+            return $http.get('/tareas')
+            .success(function(data){
+                angular.copy(data, comun.tareas)
 
-	return comun;
-})
+                return comun.tareas
+            })
+        }
 
-.controller('ctrlAlta',function($scope,$state,comun){
-	$scope.tarea = {}
-	//$scope.tareas = [];
+        comun.add = function(tarea){
+            return $http.post('/tarea', tarea)
+            .success(function(tarea){
+                comun.tareas.push(tarea);
+            })
+        }
 
-	comun.getAll();
+        comun.update = function(tarea){
+            return $http.put('/tarea/' + tarea._id, tarea)
+            .success(function(data){
+                var indice = comun.tareas.indexOf(tarea);
+                comun.tareas[indice] = data;
+            })
+        }
 
-	$scope.tareas = comun.tareas;
+        comun.delete = function(tarea){
+            return $http.delete('/tarea/' + tarea._id)
+            .success(function(){
+                var indice = comun.tareas.indexOf(tarea);
+                comun.tareas.splice(indice, 1);
+            })
+        }
 
-	$scope.prioridades = ['Baja','Normal','Alta'];
+        return comun;
+    })
+    .controller('ctrlAlta', function($scope, $state, comun) {
+        $scope.tarea = {}
+            // $scope.tareas = [];
 
-	$scope.agregar = function(){
-		$scope.tareas.push({
-			nombre: $scope.tarea.nombre,
-			prioridad: parseInt($scope.tarea.prioridad)
-		})
+        comun.getAll();
 
-		$scope.tarea.nombre = '';
-		$scope.tarea.prioridad = '';
-	}
+        $scope.tareas = comun.tareas;
 
-	$scope.masPrioridad = function(tarea){
-		tarea.prioridad += 1;
-	}
+        $scope.prioridades = ['Baja', 'Normal', 'Alta'];
 
-	$scope.menosPrioridad = function(tarea){
-		tarea.prioridad -= 1;
-	}
+        $scope.agregar = function() {
+            comun.add({
+                nombre: $scope.tarea.nombre,
+                prioridad: parseInt($scope.tarea.prioridad)
+            })
 
-	$scope.eliminar = function(tarea){
-		comun.eliminar(tarea);
-	}
-	$scope.procesaObjeto = function(tarea){
-		comun.tarea = tarea;
-		$state.go('editar');
-	}
-})
+            $scope.tarea.nombre = '';
+            $scope.tarea.prioridad = '';
+        }
 
-.controller('ctrlEditar',function($scope,$state,comun){
-	$scope.tarea = comun.tarea;
+        $scope.masPrioridad = function(tarea) {
+            tarea.prioridad += 1;
+        }
 
-	$scope.actualizar = function(){
-		var indice = comun.tareas.indexOf(comun.tarea);
-		comun.tareas[indice] = $scope.tarea;
-		$state.go('alta');
-	}
+        $scope.menosPrioridad = function(tarea) {
+            tarea.prioridad -= 1;
+        }
 
-	$scope.eliminar = function(){
-		comun.eliminar($scope.tarea);
-		$state.go('alta');
-	}
-})
+        $scope.eliminar = function(tarea) {
+            comun.delete(tarea);
+        }
+
+        $scope.procesaObjeto = function(tarea) {
+            comun.tarea = tarea;
+            $state.go('editar');
+        }
+
+    })
+    .controller('ctrlEditar', function($scope, $state, comun) {
+        $scope.tarea = comun.tarea;
+        
+        $scope.actualizar = function() {
+            comun.update($scope.tarea);
+            $state.go('alta');
+        }
+
+        $scope.eliminar = function(){
+            comun.delete($scope.tarea);
+            $state.go('alta');
+        }
+    })
